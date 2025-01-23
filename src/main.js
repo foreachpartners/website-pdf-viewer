@@ -31,7 +31,8 @@ if (LOGGING_ENABLED) {
 }
 
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import { PDFLinkService } from 'pdfjs-dist/web/pdf_viewer';
+import { PDFLinkService, PDFViewer, EventBus, PDFPageView, TextLayerBuilder, AnnotationLayerBuilder } from 'pdfjs-dist/web/pdf_viewer';
+import 'pdfjs-dist/web/pdf_viewer.css';
 import 'pdfjs-dist/build/pdf.worker.mjs';
 import testPdf from './assets/test.pdf';
 
@@ -60,29 +61,14 @@ const errorElement = document.getElementById('error');
 // Создаем кнопку скачивания (верхнюю)
 const downloadButton = document.createElement('button');
 downloadButton.textContent = 'Download PDF';
-downloadButton.style.margin = '10px';
-downloadButton.style.padding = '8px 16px';
+downloadButton.className = 'download-button';
 downloadButton.style.display = 'none';
-downloadButton.style.backgroundColor = '#007bff';
-downloadButton.style.color = '#ffffff';
-downloadButton.style.border = 'none';
-downloadButton.style.borderRadius = '4px';
-downloadButton.style.cursor = 'pointer';
-downloadButton.style.fontSize = '14px';
 
-// Создаем нижнюю кнопку с теми же стилями
+// Создаем нижнюю кнопку
 const bottomDownloadButton = downloadButton.cloneNode(true);
 
-// Добавляем эффект при наведении для обеих кнопок
+// Обработчик для скачивания для обеих кнопок
 [downloadButton, bottomDownloadButton].forEach(button => {
-    button.addEventListener('mouseover', () => {
-        button.style.backgroundColor = '#0056b3';
-    });
-    button.addEventListener('mouseout', () => {
-        button.style.backgroundColor = '#007bff';
-    });
-    
-    // Обработчик для скачивания
     button.addEventListener('click', () => {
         if (pdfFile) {
             const link = document.createElement('a');
@@ -93,12 +79,49 @@ const bottomDownloadButton = downloadButton.cloneNode(true);
     });
 });
 
-// Размещаем кнопки до и после контейнера
+// Размещаем кнопки
 canvasContainer.parentNode.insertBefore(downloadButton, canvasContainer);
 canvasContainer.parentNode.insertBefore(bottomDownloadButton, canvasContainer.nextSibling);
 
+// Создаем eventBus для взаимодействия компонентов
+const eventBus = new EventBus();
+
 // Создаем сервис для обработки ссылок
-const linkService = new PDFLinkService();
+const linkService = new PDFLinkService({
+    eventBus,
+    externalLinkTarget: 2, // _blank
+});
+
+// Создаем фабрики для текстового слоя и слоя аннотаций
+const textLayerFactory = {
+    createTextLayerBuilder(textLayerDiv, pageIndex, viewport, enhanceTextSelection = false, eventBus) {
+        return new TextLayerBuilder({
+            textLayerDiv,
+            pageIndex,
+            viewport,
+            enhanceTextSelection,
+            eventBus,
+        });
+    },
+};
+
+const annotationLayerFactory = {
+    createAnnotationLayerBuilder(pageDiv, pdfPage, annotationStorage = null, imageResourcesPath = "", renderForms = true, l10n = null, enableScripting = false, hasJSActionsPromise = null, mouseState = null) {
+        return new AnnotationLayerBuilder({
+            pageDiv,
+            pdfPage,
+            annotationStorage,
+            imageResourcesPath,
+            renderForms,
+            linkService,
+            downloadManager: null,
+            l10n,
+            enableScripting,
+            hasJSActionsPromise,
+            mouseState,
+        });
+    },
+};
 
 // Function to display error
 function showError(message) {
@@ -108,35 +131,66 @@ function showError(message) {
 }
 
 // Функция для отрисовки одной страницы
-async function renderPage(page, initialScale = 2.8) {
+async function renderPage(page, initialScale = 1) {
     try {
+        // Вычисляем оптимальный масштаб
         const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
         const originalViewport = page.getViewport({ scale: 1 });
         
-        // Увеличиваем минимальный масштаб до 1.2
-        const padding = 40;
-        const scale = (viewportWidth - padding) / originalViewport.width;
-        const finalScale = Math.min(Math.max(scale, 1.2), initialScale);
+        // Рассчитываем масштабы по ширине и высоте с учетом отступов
+        const horizontalPadding = 40; // Увеличенный отступ для лучшего вида
+        const verticalPadding = 60;
+        const maxWidth = Math.min(viewportWidth - horizontalPadding, 1200);
+        const maxHeight = viewportHeight - verticalPadding;
+        
+        // Вычисляем масштабы, которые подойдут под каждое измерение
+        const scaleByWidth = maxWidth / originalViewport.width;
+        const scaleByHeight = maxHeight / originalViewport.height;
+        
+        // Выбираем наименьший масштаб, чтобы страница поместилась целиком
+        const scale = Math.min(scaleByWidth, scaleByHeight);
+        
+        // Ограничиваем масштаб в разумных пределах
+        const finalScale = Math.min(Math.max(scale, 0.5), 1.5);
         
         const viewport = page.getViewport({ scale: finalScale });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+
+        // Создаем контейнер для страницы
+        const pageContainer = document.createElement('div');
+        pageContainer.className = 'pdfViewer';
         
+        // Создаем canvas с точными размерами
+        const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        canvas.style.marginBottom = '20px';
-        canvas.style.maxWidth = '100%';
-        canvas.style.height = 'auto';
-        canvas.style.margin = '0 auto'; // Добавляем автоматические отступы по бокам
+        
+        const textLayerDiv = document.createElement('div');
+        textLayerDiv.className = 'textLayer';
 
-        const renderContext = {
-            canvasContext: context,
-            viewport: viewport,
-            linkService: linkService // Добавляем linkService в контекст рендеринга
-        };
+        const annotationLayerDiv = document.createElement('div');
+        annotationLayerDiv.className = 'annotationLayer';
 
-        await page.render(renderContext);
-        canvasContainer.appendChild(canvas);
+        pageContainer.appendChild(canvas);
+        pageContainer.appendChild(textLayerDiv);
+        pageContainer.appendChild(annotationLayerDiv);
+
+        const pdfPageView = new PDFPageView({
+            container: pageContainer,
+            id: page.pageNumber,
+            scale: finalScale,
+            defaultViewport: viewport,
+            eventBus: eventBus,
+            textLayerFactory: textLayerFactory,
+            annotationLayerFactory: annotationLayerFactory,
+            linkService: linkService,
+            renderInteractiveForms: true,
+        });
+
+        pdfPageView.setPdfPage(page);
+        await pdfPageView.draw();
+
+        canvasContainer.appendChild(pageContainer);
     } catch (error) {
         showError(`Error rendering page: ${error.message}`);
     }
@@ -207,15 +261,14 @@ async function renderPDF(url) {
         // Показываем обе кнопки скачивания после успешной загрузки PDF
         downloadButton.style.display = 'block';
         bottomDownloadButton.style.display = 'block';
-        
+
         // Инициализируем linkService
         linkService.setDocument(pdfDoc);
         linkService.setViewer({
             scrollPageIntoView: ({ pageNumber }) => {
-                // Находим нужный canvas и скроллим к нему
-                const canvases = canvasContainer.getElementsByTagName('canvas');
-                if (canvases[pageNumber - 1]) {
-                    canvases[pageNumber - 1].scrollIntoView();
+                const pages = canvasContainer.getElementsByClassName('pdfViewer');
+                if (pages[pageNumber - 1]) {
+                    pages[pageNumber - 1].scrollIntoView();
                 }
             }
         });
@@ -234,9 +287,7 @@ async function renderPDF(url) {
 
         loadingElement.style.display = 'none';
     } catch (error) {
-        // Скрываем обе кнопки при ошибке
-        downloadButton.style.display = 'none';
-        bottomDownloadButton.style.display = 'none';
+        downloadButton.style.display = 'none'; // Скрываем кнопку при ошибке
         if (import.meta.env.VITE_ENABLE_LOGGING) {
             console.error('PDF Loading Error:', {
                 message: error.message,

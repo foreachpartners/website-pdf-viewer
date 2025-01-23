@@ -16,18 +16,54 @@ body {
 #canvasContainer {
     background-color: white;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    padding: 10px;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
-    box-sizing: border-box;
 }
 
-#pdfCanvas {
+.pdfViewer {
+    margin: 0 0 20px 0;
+    padding: 0;
+    background: white;
+    position: relative;
+}
+
+.pdfViewer canvas {
     display: block;
-    max-width: 100%;
-    height: auto;
+    margin: 0;
+    padding: 0;
+}
+
+.textLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.8;
+    line-height: 1.0;
+    user-select: text;
+}
+
+.textLayer > span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+}
+
+.annotationLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
 }
 
 #loading, #error {
@@ -35,11 +71,11 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: white;
     padding: 20px;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     z-index: 1000;
+    background-color: white;
 }
 
 #error {
@@ -54,11 +90,20 @@ body {
     border: 1px solid #b8daff;
 }
 
-canvas {
-    border: 1px solid #ccc;
-    display: block;
-    max-width: 100%;
-    height: auto !important;
+/* Стили для кнопок скачивания */
+.download-button {
+    margin: 10px;
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.download-button:hover {
+    background-color: #0056b3;
 }
 
 @media (max-width: 768px) {
@@ -67,10 +112,6 @@ canvas {
     }
     
     #canvasContainer {
-        padding: 5px;
-    }
-    
-    canvas {
-        margin-bottom: 10px;
+        padding: 10px;
     }
 }
