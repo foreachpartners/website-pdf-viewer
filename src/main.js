@@ -133,61 +133,58 @@ function showError(message) {
 // Функция для отрисовки одной страницы
 async function renderPage(page, initialScale = 1) {
     try {
-        // Вычисляем оптимальный масштаб
         const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
         const originalViewport = page.getViewport({ scale: 1 });
         
-        // Рассчитываем масштабы по ширине и высоте с учетом отступов
-        const horizontalPadding = 40; // Увеличенный отступ для лучшего вида
-        const verticalPadding = 60;
-        const maxWidth = Math.min(viewportWidth - horizontalPadding, 1200);
-        const maxHeight = viewportHeight - verticalPadding;
-        
-        // Вычисляем масштабы, которые подойдут под каждое измерение
-        const scaleByWidth = maxWidth / originalViewport.width;
-        const scaleByHeight = maxHeight / originalViewport.height;
-        
-        // Выбираем наименьший масштаб, чтобы страница поместилась целиком
-        const scale = Math.min(scaleByWidth, scaleByHeight);
-        
-        // Ограничиваем масштаб в разумных пределах
-        const finalScale = Math.min(Math.max(scale, 0.5), 1.5);
+        const padding = 40;
+        const containerWidth = Math.min(viewportWidth - padding, 1200);
+        const scale = (containerWidth - padding) / originalViewport.width;
+        const finalScale = Math.min(Math.max(scale, 0.8), 1.2);
         
         const viewport = page.getViewport({ scale: finalScale });
 
         // Создаем контейнер для страницы
         const pageContainer = document.createElement('div');
-        pageContainer.className = 'pdfViewer';
-        
-        // Создаем canvas с точными размерами
+        pageContainer.className = 'page'; // Используем класс page
+        pageContainer.style.position = 'relative';
+        pageContainer.style.width = '100%';
+        pageContainer.style.margin = '0 auto';
+        pageContainer.style.transform = 'none'; // Отключаем трансформацию
+
+        // Создаем canvas
         const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        
-        const textLayerDiv = document.createElement('div');
-        textLayerDiv.className = 'textLayer';
 
-        const annotationLayerDiv = document.createElement('div');
-        annotationLayerDiv.className = 'annotationLayer';
 
-        pageContainer.appendChild(canvas);
-        pageContainer.appendChild(textLayerDiv);
-        pageContainer.appendChild(annotationLayerDiv);
-
+        // Создаем и настраиваем PDFPageView
         const pdfPageView = new PDFPageView({
             container: pageContainer,
             id: page.pageNumber,
-            scale: finalScale,
             defaultViewport: viewport,
             eventBus: eventBus,
-            textLayerFactory: textLayerFactory,
             annotationLayerFactory: annotationLayerFactory,
             linkService: linkService,
             renderInteractiveForms: true,
         });
 
-        pdfPageView.setPdfPage(page);
+        // Добавляем наблюдатель за изменениями стилей
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                const target = mutation.target;
+                if (target.style.transform) {
+                    target.style.transform = 'none';
+                }
+                if (target.style.height) {
+                    target.style.height = `${viewport.height}px`;
+                }
+            }
+        });
+
+        observer.observe(pageContainer, { 
+            attributes: true, 
+            attributeFilter: ['style'] 
+        });
+
+        await pdfPageView.setPdfPage(page);
         await pdfPageView.draw();
 
         canvasContainer.appendChild(pageContainer);
