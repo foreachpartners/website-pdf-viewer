@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    padding: 20px;
+    padding: 10px;
     display: flex;
     justify-content: center;
     background-color: #525659;
@@ -9,16 +9,19 @@ body {
 
 #viewerContainer {
     position: relative;
-    width: fit-content;
+    width: 100%;
+    max-width: 1200px;
 }
 
 #canvasContainer {
     background-color: white;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    padding: 20px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 #pdfCanvas {
@@ -54,4 +57,20 @@ body {
 canvas {
     border: 1px solid #ccc;
     display: block;
+    max-width: 100%;
+    height: auto !important;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 5px;
+    }
+    
+    #canvasContainer {
+        padding: 5px;
+    }
+    
+    canvas {
+        margin-bottom: 10px;
+    }
 }
