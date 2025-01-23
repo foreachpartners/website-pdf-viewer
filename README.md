@@ -2,6 +2,12 @@
 
 A web-based PDF viewer service built with PDF.js that allows viewing static PDF files through URL parameters. The service provides a secure way to view PDF documents stored on the server through a web interface.
 
+## Test links
+
+https://foreachpartners.com/docviewer/?test=true
+https://foreachpartners.com/docviewer/?doc=/docs/Sales-Partner-for-ForEach-Partners.pdf
+https://foreachpartners.com/view/docs/Sales-Partner-for-ForEach-Partners.pdf
+
 ## Overview
 
 This service provides a web interface for viewing PDF documents stored on the server. It uses:
@@ -17,6 +23,8 @@ This service provides a web interface for viewing PDF documents stored on the se
 - Clean and responsive interface
 - Loading and error states handling
 - Mobile-friendly design
+- Support for multi-page PDFs
+- Automatic page scaling and responsive layout
 
 ## Project Structure
 
@@ -68,6 +76,57 @@ sudo cp nginx/pdf-viewer.conf /etc/nginx/sites-available/
 sudo ln -s /etc/nginx/sites-available/pdf-viewer.conf /etc/nginx/sites-enabled/
 ```
 
+Example nginx configuration (pdf-viewer.conf):
+
+```nginx
+server {
+    listen 80;
+    server_name pdf-viewer.example.com;  # Замените на ваш домен
+
+    # Корневая директория для приложения просмотрщика
+    root /var/www/pdf-viewer;
+    index index.html;
+
+    # Локация для просмотра PDF
+    location /view/ {
+        alias /var/www/pdf-viewer/;
+        try_files $uri /index.html;
+    }
+
+    # Внутренняя локация для PDF файлов
+    location /pdf-internal/ {
+        internal;
+        alias /var/www/pdf-storage/;
+        
+        # Разрешаем только PDF файлы
+        if ($request_filename !~ "\.pdf$") {
+            return 403;
+        }
+        
+        # Базовые заголовки безопасности
+        add_header X-Content-Type-Options "nosniff";
+        add_header X-Frame-Options "SAMEORIGIN";
+        add_header X-XSS-Protection "1; mode=block";
+        
+        # Правильный тип контента
+        types {
+            application/pdf pdf;
+        }
+    }
+
+    # Статические файлы приложения
+    location /assets/ {
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+
+    # Запрещаем прямой доступ к PDF хранилищу
+    location /pdf-storage/ {
+        deny all;
+    }
+}
+```
+
 2. Create viewer application directory:
 
 ```bash
@@ -87,8 +146,6 @@ sudo cp -r build/* /var/www/pdf-viewer/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
-
-See `nginx/pdf-viewer.conf` for the complete nginx configuration example.
 
 ## Usage
 
