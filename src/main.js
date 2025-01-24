@@ -1,10 +1,53 @@
-// Проверяем переменные окружения только один раз
+import Analytics from 'analytics';
+import googleAnalytics from '@analytics/google-analytics';
+
+// Check environment variables only once
 const LOGGING_ENABLED = import.meta.env.VITE_ENABLE_LOGGING === 'true';
+
+// Initialize analytics only if GA ID is provided
+let analytics = null;
+try {
+    const GA_ID = import.meta.env.VITE_GA_ID;
+    
+    if (!GA_ID || GA_ID.trim() === '') {
+        throw new Error('No GA Measurement ID defined');
+    }
+    
+    analytics = Analytics({
+        debug: LOGGING_ENABLED,
+        app: 'pdf-viewer',
+        version: '1.0.0',
+        plugins: [
+            googleAnalytics({
+                measurementIds: [GA_ID],
+                debug: LOGGING_ENABLED
+            })
+        ]
+    });
+
+    if (LOGGING_ENABLED) {
+        console.log('Analytics configuration:', {
+            id: GA_ID,
+            instance: analytics
+        });
+    }
+} catch (error) {
+    if (LOGGING_ENABLED) {
+        console.warn('Failed to initialize Google Analytics:', {
+            error,
+            stack: error.stack,
+            analyticsState: analytics
+        });
+    } else {
+        console.warn('Failed to initialize Google Analytics:', error);
+    }
+}
 
 if (LOGGING_ENABLED) {
     console.log('Environment:', {
         VITE_ENABLE_LOGGING: import.meta.env.VITE_ENABLE_LOGGING,
         VITE_BASE_PATH: import.meta.env.VITE_BASE_PATH,
+        VITE_GA_ID: import.meta.env.VITE_GA_ID,
         MODE: import.meta.env.MODE
     });
 
@@ -41,14 +84,14 @@ const urlParams = new URLSearchParams(window.location.search);
 const isTest = urlParams.get('test') === 'true';
 const docFromParams = urlParams.get('doc');
 
-// Получаем путь из URL после базового пути
+// Get path from URL after base path
 const basePath = import.meta.env.VITE_BASE_PATH || '/';
 const pathName = window.location.pathname;
 const docFromPath = pathName.startsWith(basePath) 
     ? pathName.slice(basePath.length) 
     : pathName;
 
-// Приоритет отдаём параметру doc, если он есть
+// Priority is given to the doc parameter if it exists
 const pdfFile = isTest 
     ? testPdf 
     : docFromParams || (docFromPath || '');
@@ -58,16 +101,16 @@ const canvasContainer = document.getElementById('canvasContainer');
 const loadingElement = document.getElementById('loading');
 const errorElement = document.getElementById('error');
 
-// Создаем кнопку скачивания (верхнюю)
+// Create download button (top)
 const downloadButton = document.createElement('button');
 downloadButton.textContent = 'Download PDF';
 downloadButton.className = 'download-button';
 downloadButton.style.display = 'none';
 
-// Создаем нижнюю кнопку
+// Create bottom button
 const bottomDownloadButton = downloadButton.cloneNode(true);
 
-// Обработчик для скачивания для обеих кнопок
+// Download handler for both buttons
 [downloadButton, bottomDownloadButton].forEach(button => {
     button.addEventListener('click', () => {
         if (pdfFile) {
@@ -79,20 +122,20 @@ const bottomDownloadButton = downloadButton.cloneNode(true);
     });
 });
 
-// Размещаем кнопки
+// Place buttons
 canvasContainer.parentNode.insertBefore(downloadButton, canvasContainer);
 canvasContainer.parentNode.insertBefore(bottomDownloadButton, canvasContainer.nextSibling);
 
-// Создаем eventBus для взаимодействия компонентов
+// Create eventBus for component interaction
 const eventBus = new EventBus();
 
-// Создаем сервис для обработки ссылок
+// Create service for handling links
 const linkService = new PDFLinkService({
     eventBus,
     externalLinkTarget: 2, // _blank
 });
 
-// Создаем фабрики для текстового слоя и слоя аннотаций
+// Create factories for text layer and annotation layer
 const textLayerFactory = {
     createTextLayerBuilder(textLayerDiv, pageIndex, viewport, enhanceTextSelection = false, eventBus) {
         return new TextLayerBuilder({
@@ -130,7 +173,7 @@ function showError(message) {
     loadingElement.style.display = 'none';
 }
 
-// Функция для отрисовки одной страницы
+// Function to render one page
 async function renderPage(page, initialScale = 1) {
     try {
         const viewportWidth = window.innerWidth;
@@ -143,19 +186,19 @@ async function renderPage(page, initialScale = 1) {
         
         const viewport = page.getViewport({ scale: finalScale });
 
-        // Создаем контейнер для страницы
+        // Create container for page
         const pageContainer = document.createElement('div');
-        pageContainer.className = 'page'; // Используем класс page
+        pageContainer.className = 'page'; // Use class page
         pageContainer.style.position = 'relative';
         pageContainer.style.width = '100%';
         pageContainer.style.margin = '0 auto';
-        pageContainer.style.transform = 'none'; // Отключаем трансформацию
+        pageContainer.style.transform = 'none'; // Disable transformation
 
-        // Создаем canvas
+        // Create canvas
         const canvas = document.createElement('canvas');
 
 
-        // Создаем и настраиваем PDFPageView
+        // Create and configure PDFPageView
         const pdfPageView = new PDFPageView({
             container: pageContainer,
             id: page.pageNumber,
@@ -166,7 +209,7 @@ async function renderPage(page, initialScale = 1) {
             renderInteractiveForms: true,
         });
 
-        // Добавляем наблюдатель за изменениями стилей
+        // Add observer for style changes
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 const target = mutation.target;
@@ -193,7 +236,7 @@ async function renderPage(page, initialScale = 1) {
     }
 }
 
-// Функция для логирования информации о запросе
+// Function to log information about request
 function logRequestInfo() {
     if (!import.meta.env.VITE_ENABLE_LOGGING) return;
     
@@ -207,7 +250,7 @@ function logRequestInfo() {
     console.groupEnd();
 }
 
-// Функция для отображения PDF
+// Function to display PDF
 async function renderPDF(url) {
     try {
         if (import.meta.env.VITE_ENABLE_LOGGING) {
@@ -216,33 +259,33 @@ async function renderPDF(url) {
             console.log('Loading started at:', new Date().toISOString());
         }
 
-        // Устанавливаем заголовок страницы на основе имени файла
+        // Set page title based on filename
         const fileName = url.split('/').pop();
         const fileNameWithoutExt = fileName.replace('.pdf', '');
         document.title = fileNameWithoutExt || 'PDF Viewer';
 
         loadingElement.style.display = 'block';
         errorElement.style.display = 'none';
-        canvasContainer.innerHTML = ''; // Очищаем контейнер
+        canvasContainer.innerHTML = ''; // Clear container
 
         if (url.startsWith('http://') || url.startsWith('https://')) {
             throw new Error('Only relative paths are supported');
         }
 
-        // Настройка воркера
+        // Set worker configuration
         GlobalWorkerOptions.workerSrc = new URL(
             'pdfjs-dist/build/pdf.worker.mjs',
             import.meta.url
         ).toString();
 
-        // Загружаем файл
+        // Load file
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const pdfData = await response.arrayBuffer();
 
-        // Логируем попытку загрузки файла
+        // Log file loading attempt
         if (import.meta.env.VITE_ENABLE_LOGGING) {
             console.log('Fetching PDF file...');
             console.log('Response status:', response.status);
@@ -250,7 +293,7 @@ async function renderPDF(url) {
             console.log('PDF data size:', (pdfData.byteLength / 1024).toFixed(2), 'KB');
         }
 
-        // Загружаем PDF
+        // Load PDF
         const loadingTask = getDocument({
             data: pdfData,
             verbosity: 1,
@@ -260,11 +303,14 @@ async function renderPDF(url) {
 
         const pdfDoc = await loadingTask.promise;
         
-        // Показываем обе кнопки скачивания после успешной загрузки PDF
+        // Show both download buttons after successful PDF loading
         downloadButton.style.display = 'block';
         bottomDownloadButton.style.display = 'block';
 
-        // Инициализируем linkService
+        // Send analytics event after successful PDF load
+        sendGAEvent(url);
+
+        // Initialize linkService
         linkService.setDocument(pdfDoc);
         linkService.setViewer({
             scrollPageIntoView: ({ pageNumber }) => {
@@ -275,7 +321,7 @@ async function renderPDF(url) {
             }
         });
 
-        // Отрисовываем все страницы
+        // Render all pages
         for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
             const page = await pdfDoc.getPage(pageNum);
             await renderPage(page);
@@ -289,7 +335,7 @@ async function renderPDF(url) {
 
         loadingElement.style.display = 'none';
     } catch (error) {
-        downloadButton.style.display = 'none'; // Скрываем кнопку при ошибке
+        downloadButton.style.display = 'none'; // Hide button on error
         if (import.meta.env.VITE_ENABLE_LOGGING) {
             console.error('PDF Loading Error:', {
                 message: error.message,
@@ -299,6 +345,33 @@ async function renderPDF(url) {
             console.groupEnd();
         }
         showError(`Error loading PDF: ${error.message}\nStack: ${error.stack}`);
+    }
+}
+
+// Function to send analytics events
+function sendGAEvent(pdfUrl) {
+    if (!analytics) return;
+    
+    try {
+        const documentName = pdfUrl.split('/').pop();
+        
+        const eventData = {
+            documentUrl: pdfUrl,
+            documentName: documentName,
+            referrer: document.referrer,
+            timestamp: new Date().toISOString()
+        };
+
+        if (LOGGING_ENABLED) {
+            console.log('Sending GA event:', {
+                type: 'view_document',
+                data: eventData
+            });
+        }
+        
+        analytics.track('view_document', eventData);
+    } catch (error) {
+        console.warn('Failed to send analytics event:', error);
     }
 }
 

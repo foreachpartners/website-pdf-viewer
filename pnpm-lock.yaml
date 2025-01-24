@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@analytics/google-analytics':
+        specifier: ^1.1.0
+        version: 1.1.0
+      analytics:
+        specifier: ^0.8.16
+        version: 0.8.16(@types/dlv@1.1.5)
       pdfjs-dist:
         specifier: ^4.10.38
         version: 4.10.38
@@ -17,6 +23,30 @@ importers:
         version: 6.0.11
 
 packages:
+
+  '@analytics/cookie-utils@0.2.12':
+    resolution: {integrity: sha512-2h/yuIu3kmu+ZJlKmlT6GoRvUEY2k1BbQBezEv5kGhnn9KpmzPz715Y3GmM2i+m7Y0QmBdVUoA260dQZkofs2A==}
+
+  '@analytics/core@0.12.17':
+    resolution: {integrity: sha512-GMxRm5Dp3Wam/w5NNvqNKMO6zWecozbVv21Kn4WhftCx6OjJI7zMlVtiLpjGjxa0RRZfVG80YhupF0Qh9XL2gw==}
+
+  '@analytics/global-storage-utils@0.1.7':
+    resolution: {integrity: sha512-V+spzGLZYm4biZT4uefaylm80SrLXf8WOTv9hCgA46cLcyxx3LD4GCpssp1lj+RcWLl/uXJQBRO4Mnn/o1x6Gw==}
+
+  '@analytics/google-analytics@1.1.0':
+    resolution: {integrity: sha512-i8uGyELMtwEUAf3GNWNLNBzhRvReDn1RUxvMdMhjUA7+GNGxPOM4kkzFfv3giQXKNxTEjfsh75kqNcscbJsuaA==}
+
+  '@analytics/localstorage-utils@0.1.10':
+    resolution: {integrity: sha512-uJS+Jp1yLG5VFCgA5T82ZODYBS0xuDQx0NtAZrgbqt9j51BX3TcgmOez5LVkrUNu/lpbxjCLq35I4TKj78VmOQ==}
+
+  '@analytics/session-storage-utils@0.0.7':
+    resolution: {integrity: sha512-PSv40UxG96HVcjY15e3zOqU2n8IqXnH8XvTkg1X43uXNTKVSebiI2kUjA3Q7ESFbw5DPwcLbJhV7GforpuBLDw==}
+
+  '@analytics/storage-utils@0.4.2':
+    resolution: {integrity: sha512-AXObwyVQw9h2uJh1t2hUgabtVxzYpW+7uKVbdHQK80vr3Td5rrmCxrCxarh7HUuAgSDZ0bZWqmYxVgmwKceaLg==}
+
+  '@analytics/type-utils@0.6.2':
+    resolution: {integrity: sha512-TD+xbmsBLyYy/IxFimW/YL/9L2IEnM7/EoV9Aeh56U64Ify8o27HJcKjo38XY9Tcn0uOq1AX3thkKgvtWvwFQg==}
 
   '@esbuild/aix-ppc64@0.24.2':
     resolution: {integrity: sha512-thpVCb/rhxE/BnMLQ7GReQLLN8q9qbHmI55F4489/ByVg2aQaQ6kbcLb6FHkocZzQhxc4gx0sCk0tJkKBFzDhA==}
@@ -327,8 +357,22 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@types/dlv@1.1.5':
+    resolution: {integrity: sha512-JHOWNfiWepAhfwlSw17kiWrWrk6od2dEQgHltJw9AS0JPFoLZJBge5+Dnil2NfdjAvJ/+vGSX60/BRW20PpUXw==}
+
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
+
+  analytics-utils@1.0.14:
+    resolution: {integrity: sha512-9v0kPd8v0GuBvfQcg5BO48AElaEAr9IXMAfJWXYMAhrD3QprgozEIUgMp/de0vS136PUOBB+10XQH9eBgBmfMw==}
+    peerDependencies:
+      '@types/dlv': ^1.0.0
+
+  analytics@0.8.16:
+    resolution: {integrity: sha512-LEFQ47G9V1zVp9WIh2xhnbmSFEJq+WEzSv6voJ5uba88lefiIIYeG2nq87gFu83ocz1qtb9u7XgeaKKVBbbgWA==}
+
+  dlv@1.1.3:
+    resolution: {integrity: sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==}
 
   esbuild@0.24.2:
     resolution: {integrity: sha512-+9egpBW8I3CD5XPe0n6BfT5fxLzxrlDzqydF3aviG+9ni1lDC/OvMHcxqEFV0+LANZG5R1bFMWfUrjVsdwxJvA==}
@@ -406,6 +450,42 @@ packages:
         optional: true
 
 snapshots:
+
+  '@analytics/cookie-utils@0.2.12':
+    dependencies:
+      '@analytics/global-storage-utils': 0.1.7
+
+  '@analytics/core@0.12.17(@types/dlv@1.1.5)':
+    dependencies:
+      '@analytics/global-storage-utils': 0.1.7
+      '@analytics/type-utils': 0.6.2
+      analytics-utils: 1.0.14(@types/dlv@1.1.5)
+    transitivePeerDependencies:
+      - '@types/dlv'
+
+  '@analytics/global-storage-utils@0.1.7':
+    dependencies:
+      '@analytics/type-utils': 0.6.2
+
+  '@analytics/google-analytics@1.1.0': {}
+
+  '@analytics/localstorage-utils@0.1.10':
+    dependencies:
+      '@analytics/global-storage-utils': 0.1.7
+
+  '@analytics/session-storage-utils@0.0.7':
+    dependencies:
+      '@analytics/global-storage-utils': 0.1.7
+
+  '@analytics/storage-utils@0.4.2':
+    dependencies:
+      '@analytics/cookie-utils': 0.2.12
+      '@analytics/global-storage-utils': 0.1.7
+      '@analytics/localstorage-utils': 0.1.10
+      '@analytics/session-storage-utils': 0.0.7
+      '@analytics/type-utils': 0.6.2
+
+  '@analytics/type-utils@0.6.2': {}
 
   '@esbuild/aix-ppc64@0.24.2':
     optional: true
@@ -583,7 +663,24 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.31.0':
     optional: true
 
+  '@types/dlv@1.1.5': {}
+
   '@types/estree@1.0.6': {}
+
+  analytics-utils@1.0.14(@types/dlv@1.1.5):
+    dependencies:
+      '@analytics/type-utils': 0.6.2
+      '@types/dlv': 1.1.5
+      dlv: 1.1.3
+
+  analytics@0.8.16(@types/dlv@1.1.5):
+    dependencies:
+      '@analytics/core': 0.12.17(@types/dlv@1.1.5)
+      '@analytics/storage-utils': 0.4.2
+    transitivePeerDependencies:
+      - '@types/dlv'
+
+  dlv@1.1.3: {}
 
   esbuild@0.24.2:
     optionalDependencies:
