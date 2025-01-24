@@ -1,5 +1,15 @@
 import Analytics from 'analytics';
 import googleAnalytics from '@analytics/google-analytics';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+import { 
+    PDFLinkService, 
+    EventBus, 
+    PDFPageView, 
+    AnnotationLayerBuilder 
+} from 'pdfjs-dist/web/pdf_viewer';
+import 'pdfjs-dist/web/pdf_viewer.css';
+import 'pdfjs-dist/build/pdf.worker.mjs';
+import testPdf from './assets/test.pdf';
 
 // Check environment variables only once
 const LOGGING_ENABLED = import.meta.env.VITE_ENABLE_LOGGING === 'true';
@@ -73,12 +83,6 @@ if (LOGGING_ENABLED) {
     });
 }
 
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import { PDFLinkService, PDFViewer, EventBus, PDFPageView, TextLayerBuilder, AnnotationLayerBuilder } from 'pdfjs-dist/web/pdf_viewer';
-import 'pdfjs-dist/web/pdf_viewer.css';
-import 'pdfjs-dist/build/pdf.worker.mjs';
-import testPdf from './assets/test.pdf';
-
 // Get parameters from URL
 const urlParams = new URLSearchParams(window.location.search);
 const isTest = urlParams.get('test') === 'true';
@@ -134,19 +138,6 @@ const linkService = new PDFLinkService({
     eventBus,
     externalLinkTarget: 2, // _blank
 });
-
-// Create factories for text layer and annotation layer
-const textLayerFactory = {
-    createTextLayerBuilder(textLayerDiv, pageIndex, viewport, enhanceTextSelection = false, eventBus) {
-        return new TextLayerBuilder({
-            textLayerDiv,
-            pageIndex,
-            viewport,
-            enhanceTextSelection,
-            eventBus,
-        });
-    },
-};
 
 const annotationLayerFactory = {
     createAnnotationLayerBuilder(pageDiv, pdfPage, annotationStorage = null, imageResourcesPath = "", renderForms = true, l10n = null, enableScripting = false, hasJSActionsPromise = null, mouseState = null) {
