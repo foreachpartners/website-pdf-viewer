@@ -1,30 +1,89 @@
 # PDF Viewer Service
 
-A web-based PDF viewer service built with PDF.js that allows viewing static PDF files through URL parameters. The service provides a secure way to view PDF documents stored on the server through a web interface.
+A web-based PDF viewer service built with PDF.js that allows viewing PDF documents through URL parameters. The service provides a convenient way to view PDF documents through a web interface.
 
-## Test links
+## Usage
 
-https://foreachpartners.com/docviewer/?test=true
-https://foreachpartners.com/docviewer/?doc=/docs/Sales-Partner-for-ForEach-Partners.pdf
-https://foreachpartners.com/view/docs/Sales-Partner-for-ForEach-Partners.pdf
+### Viewing PDFs
+
+There are several ways to view PDF documents:
+
+1. **URL-based document path (recommended)**
+   ```
+   https://foreachpartners.com/docview/docs/Sales-Partner-for-ForEach-Partners.pdf
+   ```
+   The viewer will automatically extract and load the document path from the URL. In this example, it will load `/docs/Sales-Partner-for-ForEach-Partners.pdf`.
+
+2. **Direct document path with query parameter**
+   ```
+   https://foreachpartners.com/docview/?doc=/docs/Sales-Partner-for-ForEach-Partners.pdf
+   ```
+   Explicitly specify the path to the PDF document using the `doc` parameter.
+
+3. **Test document**
+   ```
+   https://foreachpartners.com/docview/?test=true
+   ```
+   View a test PDF document to verify the viewer is working correctly.
+
+### URL Patterns
+
+The viewer supports various URL patterns:
+- Direct path: `/docview/docs/example.pdf` → loads `/docs/example.pdf`
+- Query parameter: `/docview/?doc=/docs/example.pdf` → loads `/docs/example.pdf`
+- With subdirectories: `/docview/docs/subfolder/example.pdf` → loads `/docs/subfolder/example.pdf`
+
+### URL Structure
+
+- Base URL: `/docview/` (see [Environment Variables](#environment-variables) for configuration)
+- Optional parameter `doc`: path to PDF document (e.g., `/docs/document.pdf`)
+- Test mode: `?test=true`
+
+Examples:
+
+### Environment Variables
+
+The service can be configured using the following environment variables:
+
+- `VITE_BASE_PATH` - Base path for the application (default: `/docview`)
+  ```
+  VITE_BASE_PATH=/custom-path
+  ```
+
+- `VITE_ENABLE_LOGGING` - Enable detailed console logging (default: `false`)
+  ```
+  VITE_ENABLE_LOGGING=true
+  ```
+
+To configure these variables:
+
+1. Create a `.env` file in the project root:
+   ```
+   VITE_BASE_PATH=/docview
+   VITE_ENABLE_LOGGING=false
+   ```
+
+2. Or set them during build/start:
+   ```bash
+   VITE_BASE_PATH=/custom-path VITE_ENABLE_LOGGING=true pnpm build
+   ```
 
 ## Overview
 
-This service provides a web interface for viewing PDF documents stored on the server. It uses:
+This service provides a web interface for viewing PDF documents. It uses:
 
-- PDF.js for rendering PDF files
+- PDF.js for PDF rendering
 - Vite for building and development
-- Nginx for serving files and routing
+- Nginx for file serving and routing
 
 ## Features
 
-- Direct PDF viewing through URL parameters
-- Secure file serving through nginx internal locations
+- PDF viewing through URL parameters
 - Clean and responsive interface
 - Loading and error states handling
 - Mobile-friendly design
 - Support for multi-page PDFs
-- Automatic page scaling and responsive layout
+- Automatic page scaling
 
 ## Project Structure
 
@@ -34,8 +93,6 @@ project-root/
 │   ├── index.html
 │   ├── main.js
 │   └── styles.css
-├── nginx/
-│   └── pdf-viewer.conf
 ├── build/           # Generated after build
 └── node_modules/    # Generated after install
 ```
@@ -52,128 +109,35 @@ pnpm install
 pnpm build
 ```
 
-### 2. PDF Storage Setup
+### 2. Nginx Configuration
 
-1. Create a directory for PDF storage:
-
-```bash
-sudo mkdir -p /var/www/pdf-storage
-sudo chown -R www-data:www-data /var/www/pdf-storage
-```
-
-2. Place your PDF files in the storage directory:
-
-```bash
-sudo cp your-document.pdf /var/www/pdf-storage/
-```
-
-### 3. Nginx Configuration
-
-1. Copy the nginx configuration:
-
-```bash
-sudo cp nginx/pdf-viewer.conf /etc/nginx/sites-available/
-sudo ln -s /etc/nginx/sites-available/pdf-viewer.conf /etc/nginx/sites-enabled/
-```
-
-Example nginx configuration (pdf-viewer.conf):
+Example nginx configuration:
 
 ```nginx
-server {
-    listen 80;
-    server_name pdf-viewer.example.com;  # Замените на ваш домен
-
-    # Корневая директория для приложения просмотрщика
-    root /var/www/pdf-viewer;
+# PDF viewer configuration
+location /docview {
+    alias /opt/fep/website-pdf-viewer/build;
     index index.html;
 
-    # Локация для просмотра PDF
-    location /view/ {
-        alias /var/www/pdf-viewer/;
-        try_files $uri /index.html;
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|otf|ttc|mp4|webm|webp|ogg|json)$ {
+        try_files $uri =404;
+        access_log off;
+        expires max;
     }
 
-    # Внутренняя локация для PDF файлов
-    location /pdf-internal/ {
-        internal;
-        alias /var/www/pdf-storage/;
-        
-        # Разрешаем только PDF файлы
-        if ($request_filename !~ "\.pdf$") {
-            return 403;
-        }
-        
-        # Базовые заголовки безопасности
-        add_header X-Content-Type-Options "nosniff";
-        add_header X-Frame-Options "SAMEORIGIN";
-        add_header X-XSS-Protection "1; mode=block";
-        
-        # Правильный тип контента
-        types {
-            application/pdf pdf;
-        }
-    }
-
-    # Статические файлы приложения
-    location /assets/ {
-        expires 7d;
-        add_header Cache-Control "public";
-    }
-
-    # Запрещаем прямой доступ к PDF хранилищу
-    location /pdf-storage/ {
-        deny all;
-    }
+    try_files $uri /docview/index.html;
 }
-```
 
-2. Create viewer application directory:
+# PDF documents serving configuration
+location /docs/ {
+    autoindex off;
+    add_header Content-Disposition inline;
+    types {
+        application/pdf pdf;
+    }
 
-```bash
-sudo mkdir -p /var/www/pdf-viewer
-sudo chown -R www-data:www-data /var/www/pdf-viewer
-```
-
-3. Deploy the built application:
-
-```bash
-sudo cp -r build/* /var/www/pdf-viewer/
-```
-
-4. Test and restart nginx:
-
-```bash
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-## Usage
-
-### Viewing PDFs
-
-Access your PDFs through URLs like:
-
-```bash
-http://your-domain.com/view/document.pdf
-```
-
-### URL Structure
-
-- `/view/document.pdf` - Views a specific PDF
-- The actual PDF files are stored in `/var/www/pdf-storage/` but are not directly accessible
-- The viewer application is served from `/var/www/pdf-viewer/`
-
-### Example Directory Structure
-
-```txt
-/var/www/
-├── pdf-storage/
-│   ├── document1.pdf
-│   └── document2.pdf
-└── pdf-viewer/
-    ├── index.html
-    ├── assets/
-    └── ...
+    try_files $uri $uri/ =404;
+}
 ```
 
 ## Development
@@ -182,17 +146,6 @@ http://your-domain.com/view/document.pdf
 # Start development server
 pnpm start
 ```
-
-## Security Features
-
-- PDF files are served through internal nginx location
-- Direct access to PDF storage is prevented
-- File paths are sanitized to prevent directory traversal
-- Only .pdf files are allowed
-- Basic security headers are included:
-  - X-Content-Type-Options
-  - X-Frame-Options
-  - X-XSS-Protection
 
 ## Browser Support
 
@@ -209,7 +162,7 @@ The viewer supports all modern browsers:
 2. Create your feature branch
 3. Commit your changes
 4. Push to the branch
-5. Create a new Pull Request
+5. Create a Pull Request
 
 ## License
 
