@@ -216,6 +216,11 @@ async function renderPDF(url) {
             console.log('Loading started at:', new Date().toISOString());
         }
 
+        // Устанавливаем заголовок страницы на основе имени файла
+        const fileName = url.split('/').pop();
+        const fileNameWithoutExt = fileName.replace('.pdf', '');
+        document.title = fileNameWithoutExt || 'PDF Viewer';
+
         loadingElement.style.display = 'block';
         errorElement.style.display = 'none';
         canvasContainer.innerHTML = ''; // Очищаем контейнер
